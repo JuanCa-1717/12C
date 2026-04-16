@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Doctor;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
@@ -40,17 +41,6 @@ class DoctorService
             ->paginate($this->resolvePerPage($filters));
     }
 
-    /**
-     * Resuelve la cantidad de elementos por página.
-     */
-    public function resolvePerPage(array $filters): int
-    {
-        $perPage = (int) ($filters['per_page'] ?? 15);
-
-        if ($perPage <= 0) return 15;
-
-        return min($perPage, 100);
-    }
         /**
      * Crea un nuevo registro de Doctor.
      * * @param array $data Datos del doctor.
@@ -80,7 +70,57 @@ class DoctorService
             $doctor->update($data);
 
             // Retorna el objeto doctor actualizado
-            return $doctor;
+            return $doctor->refresh()->load('especialidades');
         });
     }
+
+    public function getEspecialidades(Doctor $doctor): Collection
+    {
+        return $doctor->especialidades()->orderBy('nombre')->get();
+    }
+
+    public function addEspecialidad(Doctor $doctor, int $especialidadId): Doctor
+    {
+        return DB::transaction(function() use ($doctor, $especialidadId) {
+            $doctor->especialidades()->syncWithoutDetaching([$especialidadId]);
+            return $doctor->refresh()->load('especialidades');
+        });
+    }
+
+    public function removeEspecialidad(Doctor $doctor, int $especialidadId): Doctor
+    {
+        return DB::transaction(function () use ($doctor, $especialidadId) {
+            $doctor->especialidades()->detach($especialidadId);
+            return $doctor->refresh()->load('especialidades');
+        });
+    }
+
+    public function replaceEspecialidades(Doctor $doctor, int ...$especialidadIds): Doctor
+    {
+        return DB::transaction(function () use ($doctor, $especialidadIds) {
+            $doctor->especialidades()->sync($especialidadIds);
+            return $doctor->refresh()->load('especialidades');
+        });
+    }
+
+    public function changeStatus(Doctor $doctor, string $estado): Doctor
+    {
+        $doctor->update(['estado' => $estado]);
+        return $doctor->refresh();
+    }
+
+    public function delete(Doctor $doctor): bool
+    {
+        return (bool) $doctor->delete();
+    }
+
+    private function resolvePerPage(array $filters): int
+    {
+        $perPage = (int) ($filters['per_page'] ?? 15);
+
+        if ($perPage <= 0) return 15;
+
+        return min($perPage, 100);
+    }
+
 }
