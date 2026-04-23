@@ -1,56 +1,42 @@
 <?php
-
+//Capeta de servicios que esta en el directorio app
 namespace App\Services;
 
-use App\Models\Especialidad;
+use App\Models\Especialidad;    
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class EspecialidadService
 {
-    /**
-     * Lista y filtra las especialidades.
-     * * @param array $filters Contiene los criterios de búsqueda.
-     * @return LengthAwarePaginator
-     */
-    public function list(array $filters = []): LengthAwarePaginator
+    //Esta funcion retorna una lista paginada de especialidades, recibe el numero de pagina y el numero de elementos por pagina
+    //En el index, cuando se necesita rellenar la tabla de especialidades, se llama a esta funcion para obtener la lista paginada de especialidades
+    //Nos pagina automaticamente con paginate()
+    public function list(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        // Inicializa el constructor de consultas de Eloquent
+        //La consulta base para obtener las especialidades
+        
         $query = Especialidad::query();
 
-        // Filtro de búsqueda por nombre
-        // Si el parámetro 'q' tiene un valor, se aplica una cláusula WHERE con LIKE
+        // Aplicar filtros si se proporcionan
         if (!empty($filters['q'])) {
             $query->where('nombre', 'like', '%' . $filters['q'] . '%');
         }
 
-        // Retorna los resultados paginados
-        // Se aplica un orden ascendente por el campo 'nombre'
         return $query
-            ->orderBy('nombre')
-            ->paginate($this->resolverPerPage($filters));
+        ->orderBy('nombre')
+        ->paginate($this->resolvePerPage($filters)); //Segun el numero de elementos por pagina, se paginara la lista de especialidades
     }
 
-    /**
-     * Método auxiliar para determinar la cantidad de elementos por página.
-     * Basado en la lógica del código, este método debe existir en la clase.
-     */
-    public function resolverPerPage(array $filters)
+    public function delete(Especialidad $especialidad)
     {
-        // Retorna el valor de 'per_page' si existe, de lo contrario un valor por defecto (ej. 15)
-        return (bool)$especialidad->delete();
+        return (bool) $especialidad->delete();
     }
 
     public function resolvePerPage(array $filters): int
     {
-        // Obtiene el valor de 'per_page' del arreglo de filtros, 
-        // lo convierte a entero y usa 15 como valor por defecto si no existe.
-        $perPage = (int) ($filters['per_page'] ?? 15);
-
-        // Si el valor resultante es menor o igual a 0, retorna 15 por defecto.
-        if ($perPage <= 0) return 15;
-
-        // Retorna el valor, pero lo limita a un máximo de 100 para evitar sobrecarga.
-        return min($perPage, 100);
+        $perPage = (int)($filters['per_page'] ?? 15); //Si no se proporciona el numero de elementos por pagina, se paginara con 15 elementos por pagina
+        
+        if($perPage <= 0)return 15; //Si el numero de elementos por pagina es menor o igual a 0, se paginara con 15 elementos por pagina
+    
+        return min($perPage, 100); //Si el numero de elementos por pagina es mayor a 100, se paginara con 100 elementos por pagina
     }
-
 }
