@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class UserService
 {
@@ -68,6 +69,45 @@ class UserService
 
         $user->update($payload);
 
+        return $user->refresh()->load(['roles', 'permissions']);
+    }
+
+    public function delete(User $user): bool
+    {
+        return (bool) $user->delete();
+    }
+
+    public function getRoles(User $user): Collection
+    {
+        return $user->roles()->orderBy('name')->get();
+    }
+
+    public function addRole(User $user, string $roleName): User
+    {
+        $user->assignRole($roleName);
+        return $user->refresh()->load(['roles', 'permissions']);
+    }
+
+    public function replaceRoles(User $user, string ...$roleNames): User
+    {
+        $user->syncRoles($roleNames);
+        return $user->refresh()->load(['roles', 'permissions']);
+    }
+
+    public function getDirectPermissions(User $user): Collection
+    {
+        return $user->permissions()->orderBy('name')->get();
+    }
+
+    public function addDirectPermission(User $user, string $permissionName): User
+    {
+        $user->givePermissionTo($permissionName);
+        return $user->refresh()->load(['roles', 'permissions']);
+    }
+
+    public function removeDirectPermission(User $user, string $permissionName): User
+    {
+        $user->revokePermissionTo($permissionName);
         return $user->refresh()->load(['roles', 'permissions']);
     }
 
